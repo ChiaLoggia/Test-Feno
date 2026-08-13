@@ -277,16 +277,17 @@ async function rpc(nombreFuncion, parametros = {}) {
 
     if (!res.ok) {
       const texto = await res.text();
-      console.error(
-        'Error RPC',
-        nombreFuncion,
-        res.status,
-        texto
-      );
+      console.error('Error RPC', nombreFuncion, res.status, texto);
       return null;
     }
 
-    return await res.json();
+    const texto = await res.text();
+
+    if (!texto) {
+      return null;
+    }
+
+    return JSON.parse(texto);
 
   } catch (e) {
     console.error('Falla de red RPC', nombreFuncion, e);
