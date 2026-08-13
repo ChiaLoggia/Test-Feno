@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mi Cuestionario</title>
+
+  <!-- Tipografías de Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Librerías para generar el PDF del certificado -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* ─── PALETA Y BASES ─────────────────────────────────────── */
+    :root {
+      --color-principal: #1e6091;
+      --gris-oscuro: #2b2b2b;
+      --gris-claro: #f4f4f4;
+      --borde: #d8d8d8;
+      --texto-medio: #6c6c6c;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      margin: 0; padding: 0;
+      background: var(--gris-claro);
+      color: var(--gris-oscuro);
+    }
+    .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 12px; padding: 36px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+    /* ─── TIPOGRAFÍAS ────────────────────────────────────────── */
+    h1 { font-size: 2rem; margin-top: 0; }
+    h2 { font-size: 1.4rem; margin-top: 0; }
+    p  { font-size: 1rem; line-height: 1.5; }
+    .small { font-size: 0.85rem; color: var(--texto-medio); }
+
+    /* ─── BOTONES ────────────────────────────────────────────── */
+    .btn {
+      display: inline-block;
+      padding: 14px 28px;
+      background: var(--color-principal);
+      color: white;
+      border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: white; color: var(--color-principal); border: 2px solid var(--color-principal); }
+
+    /* ─── INPUTS DE FORMULARIO ───────────────────────────────── */
+    input, textarea, select {
+      width: 100%; padding: 12px; font-size: 1rem;
+      border: 2px solid var(--borde); border-radius: 8px;
+      box-sizing: border-box; font-family: inherit;
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    .field { margin-bottom: 18px; }
+
+    /* ─── OPCIONES TIPO BOTÓN (single y multiple) ────────────── */
+    .option-btn {
+      display: block; width: 100%; padding: 14px;
+      margin-bottom: 8px; background: white;
+      border: 2px solid var(--borde); border-radius: 8px;
+      text-align: left; font-size: 1rem;
+      cursor: pointer; font-family: inherit;
+    }
+    .option-btn:hover { border-color: var(--color-principal); }
+    .option-btn.selected { border-color: var(--color-principal); background: rgba(30,96,145,0.08); }
+
+    /* ─── ESCALA LIKERT ──────────────────────────────────────── */
+    .likert { display: flex; justify-content: space-between; gap: 8px; margin: 12px 0; }
+    .likert-btn {
+      flex: 1 1 0; aspect-ratio: 1; max-width: 64px;
+      border: 2px solid var(--borde); background: white;
+      border-radius: 8px; font-size: 1.1rem; font-weight: 700;
+      cursor: pointer;
+    }
+    .likert-btn.selected { background: var(--color-principal); color: white; border-color: var(--color-principal); }
+    .likert-labels { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--texto-medio); margin-bottom: 4px; }
+
+    /* ─── PANTALLAS ──────────────────────────────────────────── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ─── CERTIFICADO ────────────────────────────────────────── */
+    #cert-preview {
+      background: #fafaf6;
+      border: 3px solid var(--color-principal);
+      border-radius: 14px; padding: 40px;
+      text-align: center; margin: 20px 0;
+    }
+    .cert-titulo { font-size: 1.5rem; font-weight: 700; color: var(--color-principal); letter-spacing: 2px; margin-bottom: 12px; }
+    .cert-nombre { font-size: 2rem; font-weight: 700; color: var(--gris-oscuro); margin: 16px 0; }
+    .cert-cuerpo { color: var(--texto-medio); }
+
+    /* ─── CONSENTIMIENTO (estilo T&C, chiquito) ──────────────── */
+    .consent {
+      font-size: 0.78rem; color: var(--texto-medio);
+      background: rgba(0,0,0,0.03); padding: 12px 16px;
+      border-radius: 6px; margin: 16px 0;
+      text-align: justify; line-height: 1.45;
+    }
+
+    /* ─── SPINNER (feedback de carga) ────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: -2px; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- ════ PANTALLA 1: BIENVENIDA + CONSENTIMIENTO ════════════════ -->
+  <div class="screen active" id="screen-intro">
+    <div class="card">
+      <h1>Encuesta sobre el taller</h1>
+      <p>Gracias por participar. Esto te llevará unos 5 minutos.</p>
+      <p class="small">Tus respuestas se usarán solo con fines de mejora del taller. La información se trata de forma confidencial y anonimizada.</p>
+
+      <div class="consent">
+        Al presionar "Continuar", autorizás el uso confidencial de tus respuestas con fines exclusivamente de mejora del taller y análisis estadístico. La información será tratada de manera estrictamente confidencial. Los resultados se presentarán de forma agregada y anonimizada. Tu participación es voluntaria y podés interrumpirla en cualquier momento.
+      </div>
+
+      <button class="btn" id="btn-comenzar" onclick="iniciar()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- ════ PANTALLA 2: OPCIÓN ÚNICA ═══════════════════════════════ -->
+  <div class="screen" id="screen-formato">
+    <div class="card">
+      <h2>¿Qué formato te gustó más?</h2>
+      <p class="small">Elegí una opción.</p>
+      <div id="opts-formato"></div>
+      <button class="btn" onclick="pasarA('screen-temas', validarFormato)">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ════ PANTALLA 3: OPCIÓN MÚLTIPLE ════════════════════════════ -->
+  <div class="screen" id="screen-temas">
+    <div class="card">
+      <h2>¿Qué temas te gustaría profundizar?</h2>
+      <p class="small">Seleccioná todas las opciones que correspondan.</p>
+      <div id="opts-temas"></div>
+      <button class="btn" onclick="pasarA('screen-likert', validarTemas)">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ════ PANTALLA 4: ESCALA LIKERT ══════════════════════════════ -->
+  <div class="screen" id="screen-likert">
+    <div class="card">
+      <h2>¿Cuán satisfecho/a quedaste con el taller?</h2>
+      <div class="likert-labels">
+        <span>Muy insatisfecho</span>
+        <span>Muy satisfecho</span>
+      </div>
+      <div class="likert" id="opts-likert"></div>
+      <button class="btn" onclick="pasarA('screen-datos', validarLikert)">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ════ PANTALLA 5: DATOS (texto libre + desplegable) ══════════ -->
+  <div class="screen" id="screen-datos">
+    <div class="card">
+      <h2>Tus datos</h2>
+
+      <div class="field">
+        <label>Nombre y apellido</label>
+        <input type="text" id="input-nombre" placeholder="Cómo te llamás" />
+      </div>
+
+      <div class="field">
+        <label>Rango de edad</label>
+        <select id="input-edad">
+          <option value="">Elegí una opción</option>
+          <option>Menos de 25</option>
+          <option>25 a 34</option>
+          <option>35 a 44</option>
+          <option>45 a 54</option>
+          <option>55 o más</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Comentarios (opcional)</label>
+        <textarea id="input-comentario" placeholder="Cualquier cosa que quieras contarnos"></textarea>
+      </div>
+
+      <button class="btn" id="btn-finalizar" onclick="finalizar()">Ver mi certificado →</button>
+    </div>
+  </div>
+
+  <!-- ════ PANTALLA 6: CERTIFICADO ════════════════════════════════ -->
+  <div class="screen" id="screen-cert">
+    <div class="card">
+      <h2>¡Listo! Acá está tu certificado</h2>
+
+      <div id="cert-preview">
+        <div class="cert-titulo">CERTIFICADO DE PARTICIPACIÓN</div>
+        <p class="cert-cuerpo">Se otorga el presente certificado a</p>
+        <div class="cert-nombre" id="cert-nombre">—</div>
+        <p class="cert-cuerpo">por su participación en el Taller [Nombre]</p>
+        <p class="small" id="cert-fecha" style="margin-top:24px;">—</p>
+      </div>
+
+      <p class="small" style="background:rgba(255,180,0,0.15);padding:12px;border-radius:6px;">
+        ⚠️ No guardamos tu certificado. Descargalo o compartilo ahora, si salís de esta página no podrás recuperarlo.
+      </p>
+
+      <button class="btn" onclick="descargarImagen()">📷 Compartir como imagen</button>
+      <button class="btn btn-secondary" onclick="descargarPDF()">⬇ Descargar PDF</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// Reemplazá los placeholders por los valores reales de tu proyecto.
+// Los encontrás en Supabase → Settings → API.
+// ════════════════════════════════════════════════════════════════
+const SUPABASE_URL  = '<TU_PROJECT_URL_AQUI>';
+const SUPABASE_ANON = '<TU_ANON_PUBLIC_KEY_AQUI>';
+
+// ════════════════════════════════════════════════════════════════
+// DEFINICIÓN DE PREGUNTAS
+// Para agregar/quitar/cambiar opciones, editá estos arrays.
+// ════════════════════════════════════════════════════════════════
+const OPTS_FORMATO = ['Clase teórica', 'Trabajo grupal', 'Práctica individual'];
+const OPTS_TEMAS   = ['Profundización conceptual', 'Más ejercicios prácticos', 'Casos de estudio', 'Discusión grupal'];
+
+// ════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════════════════════════
+let sesionId = null;
+const respuestas = {
+  formato_preferido: null,
+  temas_interes: [],
+  satisfaccion: null,
+  nombre: '',
+  edad: '',
+  comentario: ''
+};
+
+// ════════════════════════════════════════════════════════════════
+// UTILIDADES
+// ════════════════════════════════════════════════════════════════
+
+function mostrar(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function rpc(nombreFuncion, parametros = {}) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nombreFuncion, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON
+      },
+      body: JSON.stringify(parametros)
+    });
+    if (!res.ok) { console.error('Error RPC', nombreFuncion, res.status); return null; }
+    return await res.json();
+  } catch (e) {
+    console.error('Falla de red RPC', nombreFuncion, e);
+    return null;
+  }
+}
+
+async function guardar(datos) {
+  if (!sesionId) return;
+  await rpc('guardar_respuesta', { p_id: sesionId, p_datos: datos });
+}
+
+function pasarA(idPantalla, validar) {
+  if (validar && !validar()) return;
+  mostrar(idPantalla);
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER DE PREGUNTAS
+// ════════════════════════════════════════════════════════════════
+
+function renderOpcionesUnica(contenedorId, opciones, claveRespuesta) {
+  const cont = document.getElementById(contenedorId);
+  cont.innerHTML = '';
+  opciones.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      cont.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      respuestas[claveRespuesta] = opt;
+    };
+    cont.appendChild(btn);
+  });
+}
+
+function renderOpcionesMultiple(contenedorId, opciones, claveRespuesta) {
+  const cont = document.getElementById(contenedorId);
+  cont.innerHTML = '';
+  opciones.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      btn.classList.toggle('selected');
+      const idx = respuestas[claveRespuesta].indexOf(opt);
+      if (idx >= 0) respuestas[claveRespuesta].splice(idx, 1);
+      else respuestas[claveRespuesta].push(opt);
+    };
+    cont.appendChild(btn);
+  });
+}
+
+function renderLikert(contenedorId, claveRespuesta) {
+  const cont = document.getElementById(contenedorId);
+  cont.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'likert-btn';
+    btn.textContent = i;
+    btn.onclick = () => {
+      cont.querySelectorAll('.likert-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      respuestas[claveRespuesta] = i;
+    };
+    cont.appendChild(btn);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// VALIDACIONES
+// ════════════════════════════════════════════════════════════════
+function validarFormato() {
+  if (!respuestas.formato_preferido) { alert('Por favor seleccioná una opción.'); return false; }
+  guardar({ formato_preferido: respuestas.formato_preferido });
+  return true;
+}
+
+function validarTemas() {
+  if (respuestas.temas_interes.length === 0) { alert('Por favor seleccioná al menos una opción.'); return false; }
+  guardar({ temas_interes: respuestas.temas_interes });
+  return true;
+}
+
+function validarLikert() {
+  if (!respuestas.satisfaccion) { alert('Por favor elegí un valor.'); return false; }
+  guardar({ satisfaccion: respuestas.satisfaccion });
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════════
+// FLUJO PRINCIPAL
+// ════════════════════════════════════════════════════════════════
+async function iniciar() {
+  const btn = document.getElementById('btn-comenzar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Cargando…';
+
+  sesionId = await rpc('crear_respuesta');
+  await guardar({ acepto_consentimiento: true });
+
+  btn.disabled = false;
+  btn.innerHTML = 'Continuar →';
+
+  renderOpcionesUnica('opts-formato', OPTS_FORMATO, 'formato_preferido');
+  renderOpcionesMultiple('opts-temas', OPTS_TEMAS, 'temas_interes');
+  renderLikert('opts-likert', 'satisfaccion');
+  mostrar('screen-formato');
+}
+
+async function finalizar() {
+  const nombre = document.getElementById('input-nombre').value.trim();
+  if (!nombre) { alert('Por favor ingresá tu nombre.'); return; }
+
+  respuestas.nombre = nombre;
+  respuestas.edad = document.getElementById('input-edad').value;
+  respuestas.comentario = document.getElementById('input-comentario').value.trim();
+
+  const btn = document.getElementById('btn-finalizar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Guardando…';
+
+  await guardar({
+    nombre: respuestas.nombre,
+    edad: respuestas.edad,
+    comentario: respuestas.comentario,
+    timestamp_fin: new Date().toISOString()
+  });
+
+  document.getElementById('cert-nombre').textContent = nombre;
+  const hoy = new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('cert-fecha').textContent = hoy;
+
+  mostrar('screen-cert');
+}
+
+// ════════════════════════════════════════════════════════════════
+// DESCARGA DEL CERTIFICADO (PDF + PNG)
+// ════════════════════════════════════════════════════════════════
+async function generarCanvas() {
+  // Clonamos el certificado a 800px de ancho para que se vea grande
+  // incluso si la persona está en mobile.
+  const cert = document.getElementById('cert-preview');
+  const clone = cert.cloneNode(true);
+  const sandbox = document.createElement('div');
+  sandbox.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:#fafaf6;';
+  clone.style.cssText = 'width:800px;';
+  sandbox.appendChild(clone);
+  document.body.appendChild(sandbox);
+  try {
+    return await html2canvas(clone, { scale: 2, backgroundColor: '#fafaf6', width: 800, windowWidth: 800 });
+  } finally {
+    document.body.removeChild(sandbox);
+  }
+}
+
+async function descargarPDF() {
+  const canvas = await generarCanvas();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+  const ratio = canvas.width / canvas.height;
+  let w = pw - 40, h = w / ratio;
+  if (h > ph - 40) { h = ph - 40; w = h * ratio; }
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pw - w) / 2, (ph - h) / 2, w, h);
+  pdf.save('certificado.pdf');
+  await guardar({ certificado_descargado: true });
+}
+
+async function descargarImagen() {
+  const canvas = await generarCanvas();
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'certificado.png';
+  a.click();
+  await guardar({ certificado_descargado: true });
+}
+</script>
+</body>
+</html>
