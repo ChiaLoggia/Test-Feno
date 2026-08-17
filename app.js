@@ -103,21 +103,17 @@
       if (question.scored && button.dataset.key === question.correct) button.classList.add("correct");
     });
     if (question.scored && !isCorrect) selectedButton.classList.add("wrong");
-  if (question.scored) {
-  const feedback = $("feedback");
-  feedback.classList.add(isCorrect ? "good" : "bad");
-  feedback.innerHTML =
-    `<strong>${isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</strong>` +
-    escapeHtml(question.feedback);
-  feedback.hidden = false;
-} else {
-  const feedback = $("feedback");
-  feedback.classList.add("neutral");
-  feedback.innerHTML =
-    "<strong>¡Gracias!</strong>" +
-    "Tu respuesta fue registrada. Esta pregunta no suma ni resta puntos.";
-  feedback.hidden = false;
-}
+    if (question.scored) {
+      const feedback = $("feedback");
+      feedback.classList.add(isCorrect ? "good" : "bad");
+      feedback.innerHTML = `<strong>${isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</strong>${escapeHtml(question.feedback)}`;
+      feedback.hidden = false;
+    } else {
+      const feedback = $("feedback");
+      feedback.classList.add("neutral");
+      feedback.innerHTML = "<strong>¡Gracias!</strong>Tu respuesta fue registrada. Esta pregunta no suma ni resta puntos.";
+      feedback.hidden = false;
+    }
     $("score-live").textContent = `Puntaje: ${state.score}`;
     $("next-button").hidden = false;
   }
@@ -198,46 +194,50 @@
     }
   }
 
-async function certificateCanvas() {
-  if (!window.html2canvas) {
-    throw new Error("La librería de descarga todavía no cargó.");
+  async function certificateCanvas() {
+    if (!window.html2canvas) throw new Error("La librería de descarga todavía no cargó.");
+    const original = $("certificate");
+    const clone = original.cloneNode(true);
+    const sandbox = document.createElement("div");
+
+    sandbox.style.cssText = "position:fixed;left:-10000px;top:0;width:800px;overflow:visible;background:#fffdf5;";
+    clone.style.cssText = "width:800px;min-height:590px;margin:0;transform:none;transform-origin:initial;";
+    sandbox.appendChild(clone);
+    document.body.appendChild(sandbox);
+
+    try {
+      await document.fonts.ready;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return await window.html2canvas(clone, {
+        scale: 2,
+        backgroundColor: "#fffdf5",
+        width: 800,
+        height: clone.scrollHeight,
+        windowWidth: 1000,
+        windowHeight: clone.scrollHeight,
+        useCORS: true
+      });
+    } finally {
+      document.body.removeChild(sandbox);
+    }
   }
 
-  const original = $("certificate");
-  const clone = original.cloneNode(true);
-  const sandbox = document.createElement("div");
-
-  sandbox.style.cssText =
-    "position:fixed;left:-10000px;top:0;width:800px;" +
-    "overflow:visible;background:#fffdf5;";
-
-  clone.style.cssText =
-    "width:800px;min-height:590px;margin:0;" +
-    "transform:none;transform-origin:initial;";
-
-  sandbox.appendChild(clone);
-  document.body.appendChild(sandbox);
-
-  try {
-    await document.fonts.ready;
-
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))
-    );
-
-    return await window.html2canvas(clone, {
-      scale: 2,
-      backgroundColor: "#fffdf5",
-      width: 800,
-      height: clone.scrollHeight,
-      windowWidth: 1000,
-      windowHeight: clone.scrollHeight,
-      useCORS: true
-    });
-  } finally {
-    document.body.removeChild(sandbox);
+  async function downloadPng() {
+    const canvas = await certificateCanvas();
+    const link = document.createElement("a");
+    link.download = `certificado-${state.masterclass.slug}.png`;
+    link.href = canvas.toDataURL("image/png"); link.click();
   }
-}
+
+  async function downloadPdf() {
+    const canvas = await certificateCanvas();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const width = pdf.internal.pageSize.getWidth() - 20;
+    const height = width * canvas.height / canvas.width;
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, (pdf.internal.pageSize.getHeight() - height) / 2, width, height);
+    pdf.save(`certificado-${state.masterclass.slug}.pdf`);
+  }
 
   $("participant-form").addEventListener("submit", startQuiz);
   $("next-button").addEventListener("click", nextQuestion);
