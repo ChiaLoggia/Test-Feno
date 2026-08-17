@@ -103,12 +103,21 @@
       if (question.scored && button.dataset.key === question.correct) button.classList.add("correct");
     });
     if (question.scored && !isCorrect) selectedButton.classList.add("wrong");
-    if (question.scored) {
-      const feedback = $("feedback");
-      feedback.classList.add(isCorrect ? "good" : "bad");
-      feedback.innerHTML = `<strong>${isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</strong>${escapeHtml(question.feedback)}`;
-      feedback.hidden = false;
-    }
+  if (question.scored) {
+  const feedback = $("feedback");
+  feedback.classList.add(isCorrect ? "good" : "bad");
+  feedback.innerHTML =
+    `<strong>${isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</strong>` +
+    escapeHtml(question.feedback);
+  feedback.hidden = false;
+} else {
+  const feedback = $("feedback");
+  feedback.classList.add("neutral");
+  feedback.innerHTML =
+    "<strong>¡Gracias!</strong>" +
+    "Tu respuesta fue registrada. Esta pregunta no suma ni resta puntos.";
+  feedback.hidden = false;
+}
     $("score-live").textContent = `Puntaje: ${state.score}`;
     $("next-button").hidden = false;
   }
