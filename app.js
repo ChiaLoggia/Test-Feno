@@ -189,27 +189,46 @@
     }
   }
 
-  async function certificateCanvas() {
-    if (!window.html2canvas) throw new Error("La librería de descarga todavía no cargó.");
-    return window.html2canvas($("certificate"), { scale: 2, backgroundColor: "#fffdf5", width: 800, windowWidth: 1000 });
+async function certificateCanvas() {
+  if (!window.html2canvas) {
+    throw new Error("La librería de descarga todavía no cargó.");
   }
 
-  async function downloadPng() {
-    const canvas = await certificateCanvas();
-    const link = document.createElement("a");
-    link.download = `certificado-${state.masterclass.slug}.png`;
-    link.href = canvas.toDataURL("image/png"); link.click();
-  }
+  const original = $("certificate");
+  const clone = original.cloneNode(true);
+  const sandbox = document.createElement("div");
 
-  async function downloadPdf() {
-    const canvas = await certificateCanvas();
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    const width = pdf.internal.pageSize.getWidth() - 20;
-    const height = width * canvas.height / canvas.width;
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, (pdf.internal.pageSize.getHeight() - height) / 2, width, height);
-    pdf.save(`certificado-${state.masterclass.slug}.pdf`);
+  sandbox.style.cssText =
+    "position:fixed;left:-10000px;top:0;width:800px;" +
+    "overflow:visible;background:#fffdf5;";
+
+  clone.style.cssText =
+    "width:800px;min-height:590px;margin:0;" +
+    "transform:none;transform-origin:initial;";
+
+  sandbox.appendChild(clone);
+  document.body.appendChild(sandbox);
+
+  try {
+    await document.fonts.ready;
+
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+
+    return await window.html2canvas(clone, {
+      scale: 2,
+      backgroundColor: "#fffdf5",
+      width: 800,
+      height: clone.scrollHeight,
+      windowWidth: 1000,
+      windowHeight: clone.scrollHeight,
+      useCORS: true
+    });
+  } finally {
+    document.body.removeChild(sandbox);
   }
+}
 
   $("participant-form").addEventListener("submit", startQuiz);
   $("next-button").addEventListener("click", nextQuestion);
