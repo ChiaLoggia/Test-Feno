@@ -1,0 +1,142 @@
+<!doctype html>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ARCHIVO MADRE — NO EDITAR                                 ║
+  ║  Preguntas: contenido-preguntas.js                         ║
+  ║  Introducciones: contenido-introducciones.js               ║
+  ║  Apariencia: apariencia.css                                ║
+  ║  Supabase: config.js                                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Evaluación de Masterclass Fenomenautas">
+  <title>Masterclass Fenomenautas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="apariencia.css?v=2">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="contenido-preguntas.js?v=2" defer></script>
+  <script src="contenido-introducciones.js?v=2" defer></script>
+  <script src="config.js?v=2" defer></script>
+  <script src="core/app.js?v=2" defer></script>
+</head>
+<body class="in-intro">
+  <div id="progress-wrap" aria-label="Progreso"><div id="progress-bar"></div></div>
+
+  <header id="site-header">
+    <img src="fenomenautas-logo.png" alt="Fenomenautas" class="header-logo">
+    <span id="step-label">Veamos cuánto aprendiste</span>
+  </header>
+
+  <div class="deco-circle deco-circle-top"></div>
+  <div class="deco-circle deco-circle-bottom"></div>
+  <div class="deco-orbit deco-orbit-left"></div>
+  <div class="deco-orbit deco-orbit-right"></div>
+
+  <main id="app">
+    <section class="screen active" id="screen-intro">
+      <div class="card intro-card">
+        <img src="fenomenautas-logo.png" alt="Fenomenautas" class="intro-logo">
+        <h1 id="intro-title"></h1>
+        <p id="intro-subtitle" class="intro-subtitle"></p>
+        <p id="intro-copy" class="lead"></p>
+        <button class="btn-primary" id="intro-next" type="button">Comenzar →</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-eval-intro">
+      <div class="card centered-card">
+        <h2 id="eval-intro-title"></h2>
+        <p id="eval-intro-copy" class="lead"></p>
+        <p id="eval-intro-objective" class="lead"></p>
+        <button class="btn-primary" id="eval-start" type="button">Comenzar →</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-quiz">
+      <div class="card question-card">
+        <div class="question-counter" id="question-counter"></div>
+        <h2 class="question-text" id="question-text"></h2>
+        <div class="options-list" id="options-list"></div>
+        <div class="feedback" id="feedback" hidden aria-live="polite"></div>
+        <div class="question-actions">
+          <span class="question-warning" id="question-warning" hidden>Elegí una opción para continuar.</span>
+          <button class="btn-primary" id="question-next" type="button" disabled>Siguiente →</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-data">
+      <form class="card data-card" id="data-form">
+        <h2>Tus datos</h2>
+        <p class="lead">Para conocer tu resultado y recibir el certificado, completá los siguientes datos.</p>
+        <div class="form-group">
+          <label for="participant-name">Nombre <span>*</span></label>
+          <input id="participant-name" name="name" autocomplete="given-name" placeholder="Tu nombre" required>
+        </div>
+        <div class="form-group">
+          <label for="participant-surname">Apellido <span>*</span></label>
+          <input id="participant-surname" name="surname" autocomplete="family-name" placeholder="Tu apellido" required>
+        </div>
+        <div class="form-group">
+          <label for="participant-dni">DNI <span>*</span></label>
+          <input id="participant-dni" name="dni" inputmode="numeric" pattern="[0-9. ]{7,10}" placeholder="Número de documento" required>
+        </div>
+        <div class="form-group">
+          <label for="participant-email">Correo electrónico <small>(obligatorio para obtener certificación)</small></label>
+          <input id="participant-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required>
+        </div>
+        <label class="consent-row">
+          <input id="participant-consent" type="checkbox" required>
+          <span>Autorizo el uso confidencial de mis respuestas para evaluación y análisis estadístico. Los resultados serán tratados de forma agregada.</span>
+        </label>
+        <p class="form-error" id="form-error" hidden></p>
+        <button class="btn-primary" id="data-submit" type="submit">Buscar mi certificado →</button>
+      </form>
+    </section>
+
+    <section class="screen" id="screen-result">
+      <div class="card result-card">
+        <p class="result-kicker">Resultado de la evaluación</p>
+        <div class="score-circle"><strong id="result-score"></strong><span>de 10</span></div>
+        <h2 id="result-title"></h2>
+        <p id="result-copy" class="lead"></p>
+        <p id="save-status" class="save-status"></p>
+        <button class="btn-primary" id="certificate-show" type="button" hidden>Ver mi certificado →</button>
+        <button class="btn-secondary" id="retry" type="button" hidden>Volver a intentarlo</button>
+      </div>
+    </section>
+
+    <section class="screen certificate-screen" id="screen-certificate">
+      <div id="certificate" class="certificate">
+        <svg class="cert-wave cert-wave-top" viewBox="0 0 800 100" preserveAspectRatio="none" aria-hidden="true"><path d="M-20 40 Q130 4 300 34 T820 38 L820 0 L-20 0Z" fill="#f5b526" opacity=".7"/><path d="M-20 62 Q130 28 300 56 T820 60 L820 0 L-20 0Z" fill="#f5b526" opacity=".3"/></svg>
+        <svg class="cert-wave cert-wave-bottom" viewBox="0 0 800 100" preserveAspectRatio="none" aria-hidden="true"><path d="M-20 40 Q130 4 300 34 T820 38 L820 0 L-20 0Z" fill="#f5b526" opacity=".7"/><path d="M-20 62 Q130 28 300 56 T820 60 L820 0 L-20 0Z" fill="#f5b526" opacity=".3"/></svg>
+        <div class="cert-frame cert-frame-one"></div><div class="cert-frame cert-frame-two"></div>
+        <div class="certificate-content">
+          <img src="fenomenautas-logo.png" alt="Fenomenautas" class="certificate-logo">
+          <p class="certificate-motto">Explorar fenómenos, compartir ideas</p>
+          <div class="certificate-banner">CERTIFICADO DE APROBACIÓN</div>
+          <p>Se otorga el presente certificado a</p>
+          <h2 id="certificate-name"></h2>
+          <p>por haber aprobado la evaluación de la masterclass</p>
+          <div class="certificate-course" id="certificate-course"></div>
+          <div class="certificate-footer">
+            <div><strong id="certificate-date"></strong><span>Fecha</span></div>
+            <div><strong class="signature">Fenomenautas</strong><span>Firma</span></div>
+            <div><strong id="certificate-score"></strong><span>Puntaje</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="certificate-actions">
+        <button class="btn-primary" id="download-pdf" type="button">Descargar PDF</button>
+        <button class="btn-secondary" id="download-png" type="button">Descargar PNG</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
